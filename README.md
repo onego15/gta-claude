@@ -6,6 +6,8 @@ GTAシリーズに着想を得た、ブラウザで遊べる都市型3Dオープ
 
 > `docs/demo.gif` は実際に動いているゲームの録画です（下の「デモGIFについて」を参照）。
 
+**▶ ブラウザで遊ぶ：https://onego15.github.io/gta-claude/**（PCのChrome / Edge / Firefox推奨）
+
 ## ゲーム紹介
 
 - **街**：4×4ブロックの碁盤の目と、それを囲む海沿いのプロムナード、西側の港湾地区からなるコンパクトな街です。
@@ -60,7 +62,9 @@ GTAシリーズに着想を得た、ブラウザで遊べる都市型3Dオープ
 
 ## 起動方法
 
-Node.js 20以上が必要です。
+インストールなしで遊ぶ場合は https://onego15.github.io/gta-claude/ を開いてください。`main` に push すると GitHub Actions（`.github/workflows/pages.yml`）がビルドして GitHub Pages に公開します。
+
+ローカルで動かす場合は Node.js 20以上が必要です。
 
 ```bash
 npm install

@@ -1,6 +1,7 @@
 // Weapon definitions, ammo bookkeeping and hand-held models (Kenney Weapon Pack, CC0).
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from '../core/glb.js';
 
 export const WEAPONS = {
   pistol: { name: 'Pistol', dmg: 34, rate: 0.2, mag: 12, spread: 0.010, range: 140, sound: 'pistol', auto: false, recoil: 0.03, model: 'pistol', reload: 1.35, len: 0.21 },
@@ -32,7 +33,7 @@ export async function loadWeapons() {
   const metal = new THREE.MeshStandardMaterial({ color: '#2a2c30', roughness: 0.35, metalness: 0.85 });
   const grip = new THREE.MeshStandardMaterial({ color: '#141414', roughness: 0.8, metalness: 0.1 });
   for (const [name, len] of [['pistol', 0.19], ['uzi', 0.28]]) {
-    const g = await loader.loadAsync(`${import.meta.env.BASE_URL}assets/weapons/${name}.glb`);
+    const g = await loadGLB(loader, `${import.meta.env.BASE_URL}assets/weapons/${name}.glb`);
     const root = g.scene;
     root.traverse((o) => { if (o.isMesh) { o.material = /dark/.test(o.material.name) ? grip : metal; o.castShadow = true; } });
     // normalise: barrel along +z, grip down, scaled to real size, origin at the grip

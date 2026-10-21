@@ -18,7 +18,9 @@ export class Input {
       const bit = 1 << e.button; this.mouse.buttons |= bit; this.mouse.pressed |= bit;
     });
     addEventListener('mouseup', (e) => { const bit = 1 << e.button; this.mouse.buttons &= ~bit; this.mouse.released |= bit; });
-    addEventListener('mousemove', (e) => { if (this.locked) { this.mouse.dx += e.movementX; this.mouse.dy += e.movementY; } });
+    // embedded pages (sandboxed iframes) may refuse pointer lock: fall back to free mouse look
+    document.addEventListener('pointerlockerror', () => { this.lockFailed = true; });
+    addEventListener('mousemove', (e) => { if (this.locked || this.lockFailed) { this.mouse.dx += e.movementX; this.mouse.dy += e.movementY; } });
     addEventListener('wheel', (e) => { this.mouse.wheel += Math.sign(e.deltaY); }, { passive: true });
     addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('pointerlockchange', () => { this.locked = document.pointerLockElement === el; });

@@ -2,6 +2,7 @@
 // animation set (Quaternius UAL, CC0) and produces ready-to-animate instances.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from '../core/glb.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 const BASE = `${import.meta.env.BASE_URL}assets/chars/`;
@@ -19,9 +20,9 @@ export async function loadCharacters(onProgress, only = null) {
   store.roster = await (await fetch(`${BASE}roster.json`)).json();
   const ids = only || ['player', ...PED_IDS, ...GANG_IDS, ...COP_IDS];
   let done = 0; const total = ids.length + 1;
-  const anims = loader.loadAsync(`${BASE}anims.glb`).then((g) => { onProgress?.(++done / total); return g; });
+  const anims = loadGLB(loader, `${BASE}anims.glb`).then((g) => { onProgress?.(++done / total); return g; });
   await Promise.all(ids.map(async (id) => {
-    const g = await loader.loadAsync(`${BASE}${id}.glb`);
+    const g = await loadGLB(loader, `${BASE}${id}.glb`);
     g.scene.traverse((o) => {
       if (o.isMesh) {
         o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false;

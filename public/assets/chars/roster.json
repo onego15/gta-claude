@@ -1,0 +1,131 @@
+{
+ "player": {
+  "height": 1.7394169569015503,
+  "hipsY": 0.9754568040370941
+ },
+ "m_denim": {
+  "height": 1.7995973825454712,
+  "hipsY": 1.0131956934928894
+ },
+ "f_dress": {
+  "height": 1.5960886478424072,
+  "hipsY": 0.8646138906478882
+ },
+ "anims": {
+  "clips": [
+   "Idle_Loop",
+   "Walk_Loop",
+   "Jog_Fwd_Loop",
+   "Sprint_Loop",
+   "Driving_Loop",
+   "Pistol_Idle_Loop",
+   "Pistol_Aim_Neutral",
+   "Pistol_Aim_Up",
+   "Pistol_Aim_Down",
+   "Pistol_Shoot",
+   "Pistol_Reload",
+   "Hit_Chest",
+   "Hit_Head",
+   "Death01",
+   "Jump_Start",
+   "Jump_Loop",
+   "Jump_Land",
+   "Roll",
+   "Crouch_Idle_Loop",
+   "Crouch_Fwd_Loop",
+   "Idle_Talking_Loop",
+   "Sitting_Idle_Loop",
+   "Sitting_Talking_Loop",
+   "Sitting_Enter",
+   "Sitting_Exit",
+   "Punch_Jab",
+   "Punch_Cross",
+   "Interact",
+   "Walk_Formal_Loop",
+   "Dance_Loop",
+   "PickUp_Table",
+   "Idle_TalkingPhone_Loop",
+   "Idle_FoldArms_Loop",
+   "Hit_Knockback",
+   "LayToIdle",
+   "Walk_Carry_Loop",
+   "Idle_No_Loop",
+   "Yes",
+   "Consume",
+   "Idle_Rail_Loop"
+  ],
+  "hipsY": 0.9754568040370941
+ },
+ "m_stripes": {
+  "height": 1.6412433385849,
+  "hipsY": 0.9086825251579285
+ },
+ "m_whitetee": {
+  "height": 1.7437537908554077,
+  "hipsY": 0.980266809463501
+ },
+ "m_jacket_brown": {
+  "height": 1.7310864925384521,
+  "hipsY": 0.9768147766590118
+ },
+ "m_suit": {
+  "height": 1.6363717317581177,
+  "hipsY": 0.9109122157096863
+ },
+ "m_overalls": {
+  "height": 1.7860181331634521,
+  "hipsY": 1.0061035752296448
+ },
+ "m_redtee": {
+  "height": 1.6533035039901733,
+  "hipsY": 0.9177769720554352
+ },
+ "m_old": {
+  "height": 1.7191247940063477,
+  "hipsY": 0.9735265374183655
+ },
+ "f_greentee": {
+  "height": 1.601525068283081,
+  "hipsY": 0.8675307333469391
+ },
+ "f_shorts": {
+  "height": 1.5091054439544678,
+  "hipsY": 0.8179439902305603
+ },
+ "f_sport": {
+  "height": 1.65598464012146,
+  "hipsY": 0.8966973721981049
+ },
+ "f_office": {
+  "height": 1.5964272022247314,
+  "hipsY": 0.8699151277542114
+ },
+ "f_trousersuit": {
+  "height": 1.5145418643951416,
+  "hipsY": 0.8208608627319336
+ },
+ "f_old": {
+  "height": 1.4972103834152222,
+  "hipsY": 0.823283463716507
+ },
+ "gang_a": {
+  "height": 1.7475483417510986,
+  "hipsY": 0.9800527095794678
+ },
+ "gang_b": {
+  "height": 1.7962709665298462,
+  "hipsY": 1.0089994668960571
+ },
+ "gang_c": {
+  "height": 1.6533035039901733,
+  "hipsY": 0.9160573184490204
+ },
+ "cop_m": {
+  "height": 1.7961270809173584,
+  "hipsY": 1.0125198066234589
+ },
+ "cop_f": {
+  "height": 1.6495776176452637,
+  "hipsY": 0.8931825459003448
+ }
+}

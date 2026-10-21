@@ -1,0 +1,26 @@
+<!doctype html><html><body style="margin:0"><script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { HumanAvatar, loadHumanPackage } from 'humanforge/human';
+import { createRetargeter } from './retarget.js';
+const qp = new URLSearchParams(location.search);
+const clips = (qp.get('clips')||'Walk_Loop').split(','); const tfrac = +(qp.get('t')||0.25);
+const W=innerWidth,H=innerHeight; const r=new THREE.WebGLRenderer({antialias:true}); r.setSize(W,H); document.body.appendChild(r.domElement); r.toneMapping=THREE.ACESFilmicToneMapping;
+const scene=new THREE.Scene(); scene.background=new THREE.Color('#cfd6de'); scene.environment=new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(),0.04).texture;
+scene.add(new THREE.HemisphereLight('#fff','#887',0.6)); const dl=new THREE.DirectionalLight('#fff',1.5); dl.position.set(2,4,3); scene.add(dl);
+const pkg=await loadHumanPackage('/scratch/human'); 
+const ual=await new GLTFLoader().loadAsync('/scratch/UAL1_Standard.glb'); const ual2=await new GLTFLoader().loadAsync('/scratch/UAL2_Standard.glb');
+const all=[...ual.animations,...ual2.animations];
+const cam=new THREE.PerspectiveCamera(30,W/H,0.1,100); const n=clips.length; const side=qp.get('side'); if(side){cam.position.set(n*1.0-0.2+ (n*1.0+6), 1.0, 0.0); cam.position.set(n+8,1.0,0.3); cam.lookAt(n*1.0-0.2,0.9,0);} else {cam.position.set(n*1.0, 1.2, 4.5+n*0.9); cam.lookAt(n*1.0,0.9,0);}
+for (const [i,cn] of clips.entries()) {
+  const av=new HumanAvatar(pkg); av.textureSize='1k'; await av.setConfig({gender:1,skin:'young_caucasian_male',hair:'short04',eyebrows:'eyebrow001',clothes:['male_casualsuit05','shoes02']});
+  av.group.traverse(o=>{if(o.isBone)o.name=o.name.replace(':','')}); av.group.position.x=i*2+0.6; scene.add(av.group);
+  const src=(await new GLTFLoader().loadAsync('/scratch/UAL1_Standard.glb')).scene; src.position.x=i*2-0.4; scene.add(src);
+  const rt=createRetargeter(src, av.group);
+  const clip=all.find(a=>a.name===cn); const baked=rt.bake(clip, src);
+  const m1=new THREE.AnimationMixer(src); m1.clipAction(clip).play(); m1.setTime(clip.duration*tfrac);
+  const m2=new THREE.AnimationMixer(av.group); m2.clipAction(baked).play(); m2.setTime(clip.duration*tfrac);
+}
+r.render(scene,cam); window.__ready=true;
+</script></body></html>

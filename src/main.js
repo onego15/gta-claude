@@ -6,6 +6,7 @@ import '@fontsource/barlow-condensed/700.css';
 import { Game } from './game/game.js';
 import { loadCharacters } from './actors/charAssets.js';
 import { loadWeapons } from './game/weapons.js';
+import { DriverAI } from './ai/traffic.js';
 
 const qp = new URLSearchParams(location.search);
 const app = document.getElementById('app');
@@ -98,7 +99,7 @@ function frame(now) {
 window.__step = (n = 1, dt = 1 / 30) => { for (let i = 0; i < n; i++) game.update(dt); game.render(); };
 window.__start = start;
 // autopilot for automated capture: the lane-following AI computes analog stick input for the player's car
-import('./ai/traffic.js').then(({ DriverAI }) => {
+{
   window.__autopilot = (opts = {}) => {
     const v = game.player.vehicle; if (!v) return;
     if (!window.__ap || window.__ap.v !== v) { const n = game.roads.nearestEdge(v.pos.x, v.pos.z, v.heading); window.__ap = new DriverAI(game, v, n.edge); window.__ap.cruise = opts.cruise || 14; }
@@ -108,5 +109,5 @@ import('./ai/traffic.js').then(({ DriverAI }) => {
     Object.assign(v.input, save);
     game.input.virtual.move = mv;
   };
-});
+}
 boot().then(() => requestAnimationFrame(frame)).catch((e) => { ltxt.textContent = `Error: ${e.message}`; console.error(e); });

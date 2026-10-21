@@ -70,7 +70,7 @@ export class Game {
     this.hud = new HUD(this);
     prewarmCars();
     const s = this.city.sites;
-    this.player = new Player(this, { x: s.safehouse.x - 13, z: s.safehouse.z + 0.8, heading: Math.PI / 2 });
+    this.player = new Player(this, { x: s.safehouse.x - 13, z: s.safehouse.z + 1.5, heading: Math.PI / 2 });
     this.addHuman(this.player);
     this.player.give('pistol', 60);
     this.camera.yaw = Math.PI / 2; // look east along the sidewalk toward the first mission marker

@@ -155,6 +155,17 @@ export class Wanted {
       // the driver who just got out becomes a foot officer
       const d = v.ai.deployed && !v.driver ? null : null; void d;
     }
+    // from level 3 the passenger fires from the window during a chase
+    if (this.level >= 3) for (const v of this.units) {
+      if (v.dead || !v.driver || v.ai?.deployed || p.dead) continue;
+      const d = v.pos.distanceTo(pp); if (d > 26) continue;
+      v.shootT = (v.shootT ?? 1) - dt; if (v.shootT > 0) continue;
+      v.shootT = 0.7 + Math.random() * 0.9;
+      const o = v.toWorld(-v.dims.hx, 1.3, 0.2, new THREE.Vector3()); const t = _w.set(pp.x, pp.y + 1.0, pp.z);
+      if (!g.world.lineOfSight(o, t)) continue;
+      g.combat.fire({ team: 'cop', damageScale: 0.3 + this.level * 0.04, vehicle: v }, o, t.clone(), { dmg: 20, spread: 0.05, range: 60, sound: 'pistol' }, { spread: 0.05 + d * 0.003 });
+      g.effects.muzzle(o, t.clone().sub(o).normalize()); g.audio.play('pistol', { pos: o, volume: 0.8, reverb: 0.5 });
+    }
     for (const h of g.humans) if (h.copExiting && !h.vehicle && !h.combat) { this.arm(h); this.foot.push(h); h.copExiting = null; }
     // cops on foot left far behind give up
     for (const h of this.foot) if (h.pos.distanceTo(pp) > 140) { g.removeHuman(h); h.removed = true; }

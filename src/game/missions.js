@@ -139,7 +139,7 @@ export class MissionSystem {
     const g = this.game, p = g.player, t = g.time;
     for (const st of this.starts) if (st.marker) {
       st.marker.update(t);
-      if (!this.active && !p.dead && g.state === 'play' && st.marker.contains(p.wpos) && (!p.vehicle || st.def.id !== 'docks')) {
+      if (!this.active && !p.dead && g.state === 'play' && st.marker.contains(p.wpos, 1.5) && (!p.vehicle || st.def.id !== 'docks')) {
         if (g.wanted.level > 0) { if (!this._warnT || t - this._warnT > 4) { g.hud.notify('Lose the cops before starting a mission.'); this._warnT = t; } }
         else this.start(st.def);
       }
@@ -149,6 +149,7 @@ export class MissionSystem {
     if (this.timer !== null) { this.timer -= dt; if (this.timer <= 0) { this.fail("Time's up"); return; } }
     if (p.dead) return; // handled by wasted
     this.step.update?.(dt);
+    if (this.chev) this.chev.mesh.visible = !!this.step?.chevronOn && !p.vehicle;
     if (this.chev && this.step?.chevronOn) { const o = this.step.chevronOn; this.chev.update(o.pos, (o.dims ? o.dims.H : 1.9) + o.pos.y, t, g.camera.cam); }
   }
   setMarker(pos, opts) { this.marker?.dispose(); this.marker = pos ? new Marker(this.game.scene, pos, opts) : null; }

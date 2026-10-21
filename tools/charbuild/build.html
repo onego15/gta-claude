@@ -1,0 +1,113 @@
+<!doctype html><html><body><script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { WebIO } from '@gltf-transform/core';
+import { KHRMeshQuantization, ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import { dedup, prune, quantize, weld } from '@gltf-transform/functions';
+import { HumanAvatar, loadHumanPackage } from 'humanforge/human';
+import { createRetargeter } from './retarget.js';
+import { ROSTER, CLIPS_UAL1, CLIPS_UAL2 } from './configs.js';
+
+const qp = new URLSearchParams(location.search);
+const only = qp.get('only') ? qp.get('only').split(',') : null;
+const out = {}; window.__out = out; window.__log = [];
+const log = (...a) => { console.log(...a); };
+const pkg = await loadHumanPackage('/scratch/human');
+const renderer = new THREE.WebGLRenderer(); // needed for texture decode in exporter
+const toB64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+
+function rgb2hsl(r, g, b) { const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2; if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; } return [h, s, l]; }
+function hsl2rgb(h, s, l) { h /= 360; const f = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; }; if (s === 0) return [l, l, l]; const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q; return [f(p, q, h + 1 / 3), f(p, q, h), f(p, q, h - 1 / 3)]; }
+
+function texToCanvas(tex, size, recolor) {
+  const img = tex.image; const w = Math.min(size, img.width), h = Math.min(size, img.height);
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  g.drawImage(img, 0, 0, w, h);
+  if (recolor && recolor.length) {
+    const d = g.getImageData(0, 0, w, h), p = d.data;
+    // erase ops: paint logos over with a sampled fabric color (keeps fabric grain via luminance)
+    for (const rc of recolor.filter((r) => r.erase)) {
+      const sx = (rc.sample[0] * w) | 0, sy = (rc.sample[1] * h) | 0; let sr = 0, sg = 0, sb = 0, n = 0;
+      for (let y = sy - 3; y <= sy + 3; y++) for (let x = sx - 3; x <= sx + 3; x++) { const i = (y * w + x) * 4; sr += p[i]; sg += p[i + 1]; sb += p[i + 2]; n++; }
+      sr /= n; sg /= n; sb /= n;
+      const [x0, y0, x1, y1] = rc.erase.map((v, k) => (v * (k % 2 ? h : w)) | 0);
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const i = (y * w + x) * 4; const dist = Math.abs(p[i] - sr) + Math.abs(p[i + 1] - sg) + Math.abs(p[i + 2] - sb);
+        if (dist > 40) { const j = 0.94 + Math.random() * 0.12; p[i] = sr * j; p[i + 1] = sg * j; p[i + 2] = sb * j; }
+      }
+    }
+    const ops = recolor.filter((r) => !r.erase);
+    for (let i = 0; i < p.length; i += 4) {
+      const px = (i / 4) % w, py = ((i / 4) / w) | 0, u = px / w, v = py / h;
+      let [hh, s, l] = rgb2hsl(p[i] / 255, p[i + 1] / 255, p[i + 2] / 255);
+      for (const rc of ops) {
+        if (rc.rect && (u < rc.rect[0] || v < rc.rect[1] || u > rc.rect[2] || v > rc.rect[3])) continue;
+        let dh = rc.h === undefined ? 0 : Math.abs(hh - rc.h); dh = Math.min(dh, 360 - dh);
+        if (dh <= (rc.r ?? 360) && s >= (rc.minS ?? 0)) { hh = rc.to; s = Math.min(1, s * (rc.s ?? 1)); l = Math.min(1, l * (rc.l ?? 1)); break; }
+      }
+      const [r, gg, b] = hsl2rgb(hh, s, l); p[i] = r * 255; p[i + 1] = gg * 255; p[i + 2] = b * 255;
+    }
+    g.putImageData(d, 0, 0);
+  }
+  const t = new THREE.CanvasTexture(c); t.flipY = false; t.colorSpace = tex.colorSpace; t.wrapS = tex.wrapS; t.wrapT = tex.wrapT;
+  return t;
+}
+
+async function compress(raw) {
+  const io = new WebIO().registerExtensions(ALL_EXTENSIONS);
+  const doc = await io.readBinary(new Uint8Array(raw));
+  await doc.transform(dedup(), prune(), quantize({ quantizePosition: 14, quantizeNormal: 10, quantizeTexcoord: 12, quantizeWeight: 8 }));
+  return io.writeBinary(doc);
+}
+
+let refAvatar = null;
+for (const ch of ROSTER) {
+  if (only && !only.includes(ch.id)) continue;
+  const av = new HumanAvatar(pkg); av.textureSize = '1k'; av.normalMaps = ch.id === 'player';
+  await av.setConfig(ch.cfg);
+  const g = av.group;
+  g.traverse((o) => { if (o.isBone) o.name = o.name.replace(':', ''); });
+  const drop = [];
+  g.traverse((o) => {
+    if (!o.isMesh) return;
+    if (/^(teeth|tongue)-/.test(o.name) || (o.userData.softPass && !ch.tips)) { drop.push(o); return; }
+    o.geometry.morphAttributes = {}; o.morphTargetInfluences = undefined; o.morphTargetDictionary = undefined;
+    const m = o.material; const size = ch.tex || 512;
+    const isOutfit = /^clothes-/.test(o.name) && !/shoes/.test(o.name);
+    const alpha = m.transparent || m.alphaTest > 0;
+    if (m.map) { m.map = texToCanvas(m.map, size, isOutfit ? ch.recolor : null); m.map.userData.mimeType = alpha ? 'image/png' : 'image/jpeg'; }
+    if (m.normalMap) { m.normalMap = texToCanvas(m.normalMap, Math.min(size, 512)); m.normalMap.userData.mimeType = 'image/jpeg'; }
+    m.name = o.name;
+  });
+  drop.forEach((o) => o.parent.remove(o));
+  const raw = await new GLTFExporter().parseAsync(g, { binary: true });
+  const glb = await compress(raw);
+  const hips = g.getObjectByName('mixamorigHips');
+  const meta = { height: av.metrics().height, hipsY: hips.getWorldPosition(new THREE.Vector3()).y };
+  out[ch.id] = { glb: toB64(glb), meta };
+  log('built', ch.id, (glb.length / 1e6).toFixed(2) + 'MB', JSON.stringify(meta));
+  if (ch.id === 'player') refAvatar = av;
+}
+
+if (refAvatar && !qp.has('noanims')) {
+  const L = new GLTFLoader();
+  const u1 = await L.loadAsync('/scratch/UAL1_Standard.glb'), u2 = await L.loadAsync('/scratch/UAL2_Standard.glb');
+  const src = u1.scene;
+  const rt = createRetargeter(src, refAvatar.group);
+  const clips = [];
+  for (const [list, set] of [[CLIPS_UAL1, u1], [CLIPS_UAL2, u2]]) for (const n of list) {
+    const c = set.animations.find((a) => a.name === n); if (!c) { log('missing clip', n); continue; }
+    clips.push(rt.bake(c, src, 30));
+  }
+  // export skeleton-only hierarchy with the clips
+  const root = new THREE.Group(); root.name = 'rig';
+  const hips = refAvatar.group.getObjectByName('mixamorigHips');
+  const clone = hips.clone(true); root.add(clone);
+  const raw = await new GLTFExporter().parseAsync(root, { binary: true, animations: clips });
+  const glb = await compress(raw);
+  out.anims = { glb: toB64(glb), meta: { clips: clips.map((c) => c.name), hipsY: hips.getWorldPosition(new THREE.Vector3()).y } };
+  log('anims', (glb.length / 1e6).toFixed(2) + 'MB', clips.length);
+}
+window.__ready = true;
+</script></body></html>

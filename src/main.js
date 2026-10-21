@@ -1,0 +1,43 @@
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { buildCity } from './world/city.js';
+import { buildProps, windUniform } from './world/props.js';
+import { Environment } from './world/environment.js';
+import { mulberry32 } from './world/layout.js';
+
+const qp = new URLSearchParams(location.search);
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.6;
+document.getElementById('app').appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 5000);
+const city = buildCity(); scene.add(city.group);
+const props = buildProps(city, mulberry32(5)); scene.add(props.group);
+const env = new Environment(renderer, scene, { time: +(qp.get('time') || 17.5) }); if (qp.get('envI')) { env.envScale = +qp.get('envI'); env.lastEnvTime = -99; } if (qp.get('exp')) renderer.toneMappingExposure = +qp.get('exp'); if (qp.get('sunS')) env.sunScale = +qp.get('sunS');
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.45, 0.6, 0.97); composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const cp = (qp.get('cam') || '40,30,120').split(',').map(Number), lk = (qp.get('look') || '0,0,0').split(',').map(Number);
+camera.position.set(...cp); camera.lookAt(...lk);
+let last = performance.now();
+function frame() {
+  const now = performance.now(); const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  windUniform.value += dt;
+  const night = env.update(dt, new THREE.Vector3(lk[0], 0, lk[2]));
+  for (const n of props.night) n.mat[n.prop] = n.base * night;
+  composer.render();
+  requestAnimationFrame(frame);
+}
+env.update(0, new THREE.Vector3(lk[0], 0, lk[2]));
+for (const n of props.night) n.mat[n.prop] = n.base * env.nightFactor;
+composer.render();
+window.__ready = true;
+if (!qp.has('still')) requestAnimationFrame(frame);
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); });

@@ -230,9 +230,9 @@ export function buildProps(city, rnd) {
   g.add(instanced(lantGeo, bulbMat, parkL, (it) => place(it), { shadow: false }));
   // ground light pools
   const poolMat = new THREE.MeshBasicMaterial({ map: T.lightPoolTexture(), color: '#ffcf8a', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
-  night.push({ mat: poolMat, base: 0.55, prop: 'opacity' });
-  const poolGeo = new THREE.PlaneGeometry(9, 9); poolGeo.rotateX(-Math.PI / 2);
-  const pools = [...tall.map((l) => { const s = Math.sin(l.rot || 0), c = Math.cos(l.rot || 0); return { x: l.x - s * 2.1 * 1 + 0, z: l.z - c * 2.1, y: (l.dock ? 0 : CURB_H) * 0 + 0.03 }; }), ...parkL.map((l) => ({ x: l.x, z: l.z, y: 0.2, s: 0.6 }))];
+  night.push({ mat: poolMat, base: 0.8, prop: 'opacity' });
+  const poolGeo = new THREE.PlaneGeometry(13, 13); poolGeo.rotateX(-Math.PI / 2);
+  const pools = [...tall.map((l) => { const s = Math.sin(l.rot || 0), c = Math.cos(l.rot || 0); return { x: l.x - s * 2.1 * 1 + 0, z: l.z - c * 2.1, y: l.dock ? 0.03 : CURB_H + 0.02 }; }), ...parkL.map((l) => ({ x: l.x, z: l.z, y: 0.2, s: 0.6 }))];
   g.add(instanced(poolGeo, poolMat, pools, (it) => trs(it.x, it.y, it.z, 0, 0, 0, it.s || 1, 1, it.s || 1), { shadow: false, receive: false }));
 
   // trees

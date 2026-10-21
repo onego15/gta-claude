@@ -13,6 +13,12 @@ export class Environment {
     this.time = opts.time ?? 17.6; // hours
     this.daySpeed = opts.daySpeed ?? 24 / (24 * 60); // game hours per real second (1 day = 24 min)
     this.sky = new Sky(); this.sky.scale.setScalar(4500); scene.add(this.sky);
+    this.skyGain = { value: 0.55 };
+    const patchSky = (sky) => {
+      sky.material.uniforms.skyGain = this.skyGain;
+      sky.material.fragmentShader = sky.material.fragmentShader.replace('uniform float showSunDisc;', 'uniform float showSunDisc;\nuniform float skyGain;').replace('gl_FragColor = vec4( texColor, 1.0 );', 'vec3 sc = texColor * skyGain; sc = sc / (1.0 + max(vec3(0.0), sc - 0.7) * 1.2); gl_FragColor = vec4( sc, 1.0 );');
+    };
+    patchSky(this.sky);
     const u = this.sky.material.uniforms;
     u.turbidity.value = 3.2; u.rayleigh.value = 1.4; u.mieCoefficient.value = 0.004; u.mieDirectionalG.value = 0.82;
     u.cloudCoverage.value = 0.32; u.cloudDensity.value = 0.45; u.cloudScale.value = 0.00022; u.cloudSpeed.value = 0.00003;
@@ -32,7 +38,7 @@ export class Environment {
 
     this.pmrem = new THREE.PMREMGenerator(renderer);
     this.envScene = new THREE.Scene();
-    this.envSky = new Sky(); this.envSky.scale.setScalar(1000); this.envScene.add(this.envSky);
+    this.envSky = new Sky(); this.envSky.scale.setScalar(1000); this.envScene.add(this.envSky); patchSky(this.envSky);
     this.envNight = this.night.clone(); this.envNight.material = this.night.material.clone(); this.envScene.add(this.envNight);
     this.envTarget = null; this.lastEnvTime = -99;
 
@@ -129,9 +135,9 @@ export class Environment {
     const moonDir = new THREE.Vector3(-this.sunDir.x, Math.abs(this.sunDir.y) + 0.35, -this.sunDir.z).normalize();
     const dir = sunUp > 0.02 ? this.sunDir : moonDir;
     this.sun.color.copy(sunUp > 0.02 ? sunCol : moonCol);
-    this.sun.intensity = (sunUp > 0.02 ? 3.2 * sunUp : 0.32 * night) * (this.sunScale ?? 2.2);
-    this.hemi.intensity = 0.25 + 0.75 * (1 - night);
-    this.hemi.color.set(night > 0.5 ? '#3b4a6e' : '#bcd4ff').lerp(new THREE.Color('#ffc59a'), low * (1 - night) * 0.4);
+    this.sun.intensity = (sunUp > 0.02 ? 3.2 * sunUp : 0.45 * night) * (this.sunScale ?? 2.2);
+    this.hemi.intensity = 0.8 + 0.35 * night;
+    this.hemi.color.set(night > 0.5 ? '#4a5a86' : '#bcd4ff').lerp(new THREE.Color('#ffc59a'), low * (1 - night) * 0.4);
     this.hemi.groundColor.set(night > 0.5 ? '#1a1612' : '#5a5048');
     // fog
     const fogDay = new THREE.Color('#a9bccb').lerp(new THREE.Color('#d9a27a'), low * (1 - night) * 0.6);
@@ -155,7 +161,7 @@ export class Environment {
       if (this.envTarget) this.envTarget.dispose();
       this.envTarget = this.pmrem.fromScene(this.envScene, 0.02, 1, 2000);
       this.scene.environment = this.envTarget.texture;
-      this.scene.environmentIntensity = (this.envScale ?? 0.25) * (0.35 + 0.65 * (1 - night));
+      this.scene.environmentIntensity = (this.envScale ?? 0.42) * (0.35 + 0.65 * (1 - night));
     }
     return night;
   }

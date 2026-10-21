@@ -1,6 +1,6 @@
 // Usage: node tools/shot.mjs <url> <out.png> [waitExpr] [w] [h]
 import { chromium } from 'playwright';
-const [url, out, waitExpr = 'window.__ready === true', w = 1280, h = 720] = process.argv.slice(2);
+let [url, out, waitExpr, w = 1280, h = 720] = process.argv.slice(2); waitExpr ||= 'window.__ready === true';
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: +w, height: +h } });
 page.on('console', m => console.log('[console]', m.type(), m.text()));

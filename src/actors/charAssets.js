@@ -14,10 +14,10 @@ const UPPER = /Spine|Neck|Head|Shoulder|Arm|Hand/;
 
 const store = { models: {}, clips: null, roster: null, perChar: {} };
 
-export async function loadCharacters(onProgress) {
+export async function loadCharacters(onProgress, only = null) {
   const loader = new GLTFLoader();
   store.roster = await (await fetch(`${BASE}roster.json`)).json();
-  const ids = ['player', ...PED_IDS, ...GANG_IDS, ...COP_IDS];
+  const ids = only || ['player', ...PED_IDS, ...GANG_IDS, ...COP_IDS];
   let done = 0; const total = ids.length + 1;
   const anims = loader.loadAsync(`${BASE}anims.glb`).then((g) => { onProgress?.(++done / total); return g; });
   await Promise.all(ids.map(async (id) => {

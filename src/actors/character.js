@@ -65,6 +65,10 @@ export class Character {
 
   // pose: { speed, aiming, pitch, mode: 'loco'|'drive'|'sit'|'phone'|'talk'|'crouch', formal }
   update(dt, pose = {}) {
+    // animation LOD: distant characters advance their mixer every few frames
+    this._acc = (this._acc || 0) + dt; this._f = (this._f || 0) + 1;
+    if (this.lod > 1 && this._f % this.lod !== 0 && !this.oneShot) { this.root.rotation.y = this.heading; return; }
+    dt = Math.min(0.25, this._acc); this._acc = 0;
     const targets = new Map();
     const set = (name, part, w) => { const k = `${name}|${part}`; targets.set(k, (targets.get(k) || 0) + w); this._act(name, part); };
     const os = this.oneShot;

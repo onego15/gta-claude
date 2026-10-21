@@ -333,7 +333,7 @@ export function buildCar(type, { color = '#8c1c1c', livery = null } = {}) {
   shell.door.translate(-hingeX, 0, -hingeZ); shell.doorGlass.translate(-hingeX, 0, -hingeZ);
   add(shell.door, paint, doorPivot); add(shell.doorGlass, S.glass, doorPivot, false);
   // lights: headlights, taillights, grille, bumpers, mirrors, plates
-  const headMat = new THREE.MeshStandardMaterial({ color: '#f4f6f8', emissive: '#fff4e0', emissiveIntensity: 0.05, roughness: 0.1, metalness: 0.3 });
+  const headMat = new THREE.MeshStandardMaterial({ color: '#c9ced4', emissive: '#fff4e0', emissiveIntensity: 0.05, roughness: 0.15, metalness: 0.6 });
   const tailMat = new THREE.MeshStandardMaterial({ color: '#6a0d0d', emissive: '#ff1a10', emissiveIntensity: 0.25, roughness: 0.25 });
   const fz = P.L / 2, rz = -P.L / 2;
   const frontRing = shell.rings[shell.rings.length - 3], rearRing = shell.rings[2];

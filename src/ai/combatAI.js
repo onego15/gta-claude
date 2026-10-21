@@ -94,7 +94,7 @@ export class CombatAI {
     if (this.state === 'move') {
       if (!this.dest || this.relocT <= 0) {
         this.relocT = 6 + Math.random() * 4;
-        this.cover = this.useCover ? this.findCover() : null;
+        this.cover = this.useCover ? this.findCover() : null; this.bestD = undefined; this.noProg = 0;
         if (this.cover) this.dest = { x: this.cover.x, z: this.cover.z };
         else {
           // no cover: get to preferred range, slightly to the side
@@ -110,7 +110,10 @@ export class CombatAI {
       h.pose.mode = 'loco';
       h.pose.speed = h.move(dt, (dx / (d || 1)) * sp, (dz / (d || 1)) * sp, h.aiming ? faceT : null);
       if (h.aiming && canShoot() && Math.random() < 0.5) shoot();
-      if (d < 0.7) { this.state = this.cover ? 'cover' : 'peek'; this.timer = this.cover ? 0.8 + Math.random() * 1.5 : 2 + Math.random() * 2; }
+      // blocked on the way (stacked containers, other people): fight from here
+      if (d < (this.bestD ?? 1e9) - 0.3) { this.bestD = d; this.noProg = 0; } else this.noProg = (this.noProg || 0) + dt;
+      if (this.noProg > 1.6) { this.noProg = 0; this.bestD = undefined; this.cover = null; this.dest = null; this.state = 'peek'; this.timer = 2 + Math.random() * 2; return; }
+      if (d < 0.7) { this.bestD = undefined; this.state = this.cover ? 'cover' : 'peek'; this.timer = this.cover ? 0.8 + Math.random() * 1.5 : 2 + Math.random() * 2; }
       return;
     }
     if (this.state === 'cover') {

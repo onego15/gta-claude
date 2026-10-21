@@ -140,6 +140,11 @@ export class Wanted {
     const activeCars = this.units.filter((v) => !v.dead && v.driver && v.ai && !v.ai.deployed).length;
     this.spawnT -= dt;
     if (activeCars < CARS[this.level] && this.spawnT <= 0) { this.spawnT = 4 - this.level * 0.4; this.spawnUnit(); }
+    // units left far behind are recycled so the dispatcher can send fresh ones nearby
+    for (const v of [...this.units]) {
+      const d = v.pos.distanceTo(pp);
+      if (d > 230 && (v.dead || !v.ai || !v.ai.deployed)) { this.units.splice(this.units.indexOf(v), 1); g.vehicles.remove(v); }
+    }
     for (const v of this.units) {
       if (!v.ai) continue;
       // police lose track: drive to the last known position instead of the player

@@ -60,7 +60,14 @@ export function instantiate(id) {
   const src = store.models[id];
   const model = SkeletonUtils.clone(src);
   const bones = {};
-  model.traverse((o) => { if (o.isBone) bones[o.name.replace(/^mixamorig/, '')] = o; });
+  model.traverse((o) => {
+    if (o.isBone) bones[o.name.replace(/^mixamorig/, '')] = o;
+    if (o.isSkinnedMesh) {
+      // generous fixed bounds so skinned characters can be frustum culled cheaply
+      o.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.7); o.frustumCulled = true;
+      o.castShadow = !/hair|eyebrow|eyelash|eyes|teeth|tongue/i.test(o.name);
+    }
+  });
   return { model, bones, clips: clipsFor(id), height: store.roster[id].height };
 }
 

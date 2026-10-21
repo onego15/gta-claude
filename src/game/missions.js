@@ -24,7 +24,7 @@ export class Marker {
     if (icon) {
       const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
       g.fillStyle = color; g.beginPath(); g.arc(64, 64, 56, 0, 6.29); g.fill(); g.fillStyle = '#111'; g.font = 'bold 76px Anton, Impact, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(icon, 64, 70);
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthWrite: false })); sp.scale.setScalar(0.75); sp.position.y = height + 0.8; this.group.add(sp); this.sprite = sp;
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthWrite: false, sizeAttenuation: false })); sp.scale.setScalar(0.045); sp.position.y = height + 0.8; this.group.add(sp); this.sprite = sp;
     }
     scene.add(this.group);
   }

@@ -23,7 +23,7 @@ await page.evaluate(() => {
   window.__vin = (keys, buttons, dx, dy) => {
     const v = inp.virtual; const next = new Set(keys);
     v.pressed = new Set([...next].filter((k) => !v.keys.has(k)));
-    v.pressed2 = buttons & ~v.buttons; v.keys = next; v.buttons = buttons; v.dx = dx; v.dy = dy;
+    v.pressed2 = buttons & ~v.buttons; v.move = null; v.keys = next; v.buttons = buttons; v.dx = dx; v.dy = dy;
   };
 });
 let i = 0;
@@ -31,7 +31,7 @@ for (const st of script.steps) {
   if (st.eval) { const r = await page.evaluate(st.eval); if (r !== undefined) console.log(`[eval ${i}]`, JSON.stringify(r)); }
   const frames = st.frames ?? 0;
   for (let f = 0; f < frames; f++) {
-    await page.evaluate(([k, b, dx, dy, dt]) => { window.__vin(k, b, dx, dy); window.__game.update(dt); }, [st.keys || [], st.buttons || 0, st.dx || 0, st.dy || 0, st.dt || 1 / 30]);
+    await page.evaluate(([k, b, dx, dy, dt, pf]) => { window.__vin(k, b, dx, dy); if (pf) (0, eval)(pf); window.__game.update(dt); }, [st.keys || [], st.buttons || 0, st.dx || 0, st.dy || 0, st.dt || 1 / 30, st.perFrame || null]);
     if (st.every && f % st.every === 0) { await page.evaluate(() => window.__game.render()); await page.screenshot({ path: path.join(outDir, `${st.prefix || 'f'}_${String(i).padStart(3, '0')}_${String(f).padStart(4, '0')}.png`) }); }
   }
   if (st.shot) { await page.evaluate(() => window.__game.render()); await page.screenshot({ path: path.join(outDir, st.shot) }); console.log('shot', st.shot); }

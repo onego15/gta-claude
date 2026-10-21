@@ -46,13 +46,13 @@ async function boot() {
   setP(1, 'Ready');
   ltxt.classList.add('hidden'); title.querySelector('.loadbar').classList.add('hidden');
   playBtn.classList.remove('hidden');
-  game.state = 'title';
+  game.state = 'title'; game.hud.root.classList.add('hidden'); titleCam(0);
   window.__ready = true;
   if (qp.has('autostart')) start();
 }
 
 function start() {
-  title.classList.add('hidden');
+  title.classList.add('hidden'); game.hud.root.classList.remove('hidden');
   game.state = 'play';
   game.audio.start().catch(() => {});
   if (!qp.has('autostart')) game.renderer.domElement.requestPointerLock?.();
@@ -76,10 +76,19 @@ addEventListener('keydown', (e) => {
 document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && game.state === 'play' && !paused && !mapOpen && !qp.has('autostart')) setPause(true); });
 game.renderer.domElement.addEventListener('click', () => { if (game.state === 'play' && !paused && !mapOpen && !document.pointerLockElement) game.renderer.domElement.requestPointerLock?.(); });
 
+// slow cinematic orbit over the city behind the title screen
+let titleT = 0;
+function titleCam(dt) {
+  titleT += dt;
+  const a = 2.4 + titleT * 0.03, c = game.cam;
+  c.position.set(-30 + Math.cos(a) * 95, 46, 20 + Math.sin(a) * 95); c.lookAt(-10, 12, 10);
+  game.env.update(dt * 0.2, c.position); game.effects.update(dt, c, game.renderer.domElement.height);
+}
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   if (!window.__manual) {
+    if (game.state === 'title') titleCam(dt);
     if (!paused && !mapOpen) game.update(dt);
     if (game.state !== 'loading') game.render();
   }
@@ -88,4 +97,16 @@ function frame(now) {
 // deterministic stepping for automated capture: advance n frames of dt seconds each
 window.__step = (n = 1, dt = 1 / 30) => { for (let i = 0; i < n; i++) game.update(dt); game.render(); };
 window.__start = start;
+// autopilot for automated capture: the lane-following AI computes analog stick input for the player's car
+import('./ai/traffic.js').then(({ DriverAI }) => {
+  window.__autopilot = (opts = {}) => {
+    const v = game.player.vehicle; if (!v) return;
+    if (!window.__ap || window.__ap.v !== v) { const n = game.roads.nearestEdge(v.pos.x, v.pos.z, v.heading); window.__ap = new DriverAI(game, v, n.edge); window.__ap.cruise = opts.cruise || 14; }
+    const ap = window.__ap; if (opts.cruise) ap.cruise = opts.cruise; if (opts.route) ap.route = opts.route;
+    const save = { ...v.input }; ap.update(1 / 30);
+    const mv = { x: v.input.steer, y: v.input.throttle > 0 ? v.input.throttle : -v.input.brake };
+    Object.assign(v.input, save);
+    game.input.virtual.move = mv;
+  };
+});
 boot().then(() => requestAnimationFrame(frame)).catch((e) => { ltxt.textContent = `Error: ${e.message}`; console.error(e); });

@@ -2,12 +2,33 @@
 // Car models are built once per type/livery and cloned, so spawning traffic is cheap.
 import * as THREE from 'three';
 import { buildCar, CAR_TYPES } from './carModel.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { groundHeight } from '../world/layout.js';
+
+// merge the static body parts of a car template into one mesh per material (fewer draw calls)
+function mergeBody(body) {
+  const groups = new Map();
+  for (const m of [...body.children]) {
+    if (!m.isMesh) continue;
+    const g = m.geometry; const sig = Object.keys(g.attributes).sort().join(',') + (g.index ? '|i' : '|n');
+    const key = m.material.uuid + sig + (m.castShadow ? 's' : '');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(m);
+  }
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    const geos = list.map((m) => { m.updateMatrix(); return m.geometry.clone().applyMatrix4(m.matrix); });
+    const merged = mergeGeometries(geos, false); if (!merged) continue;
+    const mesh = new THREE.Mesh(merged, list[0].material); mesh.castShadow = list[0].castShadow; mesh.receiveShadow = true;
+    for (const m of list) body.remove(m);
+    body.add(mesh);
+  }
+}
 
 const templates = new Map();
 function template(type, livery) {
   const key = `${type}|${livery || ''}`;
-  if (!templates.has(key)) templates.set(key, buildCar(type, { color: '#ffffff', livery }));
+  if (!templates.has(key)) { const t = buildCar(type, { color: '#ffffff', livery }); mergeBody(t.body); templates.set(key, t); }
   return templates.get(key);
 }
 export function prewarmCars() { for (const t of Object.keys(CAR_TYPES)) template(t, null); template('sedan', 'police'); template('sedan', 'taxi'); }
@@ -121,6 +142,11 @@ export class Vehicle {
     this._visuals(dt, vf);
     if (this.hp <= 0 && !this.dead) this._startBurning();
     if (this.burnTimer > 0) { this.burnTimer -= dt; if (this.burnTimer <= 0) this.explode(); }
+    // burnt-out wreck keeps smouldering
+    if (this.dead && this.age - (this.deadAt ?? this.age) < 30 && Math.random() < dt * 12) {
+      const p = this.toWorld(0, this.dims.H * 0.8, this.dims.hz * 0.3, _v); this.game.effects.smoke(p, 1.4);
+      if (this.age - this.deadAt < 8 && Math.random() < 0.5) this.game.effects.fire(p);
+    }
   }
 
   _collideWorld() {
@@ -160,7 +186,7 @@ export class Vehicle {
   _startBurning() { if (this.burnTimer <= 0) this.burnTimer = 4.5; }
   explode() {
     if (this.dead) return;
-    this.dead = true; this.hp = 0; this.siren = false;
+    this.dead = true; this.hp = 0; this.siren = false; this.deadAt = this.age;
     const p = this.pos.clone(); p.y += 1;
     this.game.effects.explosion(p);
     this.game.audio.play('explosion', { pos: p, volume: 1.4, ref: 20, reverb: 0.8 });

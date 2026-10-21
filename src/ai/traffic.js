@@ -64,12 +64,16 @@ export class DriverAI {
     this.lateral = Math.hypot(p.x - (a.x + vx * t), p.z - (a.z + vz * t));
     return this.path.cum[this.seg] + t * L;
   }
-  _pointAt(s) {
+  _pointAt(s, off = 0) {
     const { pts, cum } = this.path;
-    if (s >= cum[cum.length - 1]) return pts[pts.length - 1];
     let i = this.seg; while (i < cum.length - 2 && cum[i + 1] < s) i++;
-    const k = (s - cum[i]) / (cum[i + 1] - cum[i] || 1);
-    return { x: pts[i].x + (pts[i + 1].x - pts[i].x) * k, z: pts[i].z + (pts[i + 1].z - pts[i].z) * k };
+    const k = Math.min(1, (s - cum[i]) / (cum[i + 1] - cum[i] || 1));
+    const p = { x: pts[i].x + (pts[i + 1].x - pts[i].x) * k, z: pts[i].z + (pts[i + 1].z - pts[i].z) * k };
+    if (off) { // shift to the right (+) / left (-) of the direction of travel
+      let tx = pts[i + 1].x - pts[i].x, tz = pts[i + 1].z - pts[i].z; const L = Math.hypot(tx, tz) || 1; tx /= L; tz /= L;
+      p.x += -tz * off; p.z += tx * off;
+    }
+    return p;
   }
 
   update(dt) {
@@ -104,7 +108,10 @@ export class DriverAI {
       }
       const s = this._project();
       const look = 4.5 + Math.abs(speed) * 0.55;
-      target = this._pointAt(s + look);
+      this.yieldT = Math.max(0, (this.yieldT || 0) - dt);
+      // pull over for a police car with its siren on; police drive near the centre line
+      const off = this.yieldT > 0 ? 1.6 : (this.mode === 'police' && v.siren && chasing ? -1.0 : 0);
+      target = this._pointAt(s + look, off);
       // lost the lane badly (pushed off): rejoin
       if (this.lateral > 9) { this.relane(); }
       desired = this.mode === 'police' && chasing ? 22 : this.panic > 0 ? 17 : this.cruise;
@@ -113,6 +120,7 @@ export class DriverAI {
       const turn = g.roads.turnType(this.edge, this.next);
       if (turn !== 'straight' && remain < 22) desired = Math.min(desired, chasing ? 9 : 5.5 + Math.max(0, remain) * 0.15);
       if (s > this.path.cum[1] && s < this.path.cum[this.path.nextStart] && turn !== 'straight') desired = Math.min(desired, chasing ? 10 : 6);
+      if (this.yieldT > 0) desired = Math.min(desired, 2.5);
       // signals: stop at the line when red / amber
       const ignoreSignals = (this.mode === 'police' && v.siren) || this.panic > 0;
       if (!ignoreSignals && remain > -0.5 && remain < 30) {
@@ -134,7 +142,11 @@ export class DriverAI {
       if (chasing && o === this.chase.vehicle) continue;
       v.toLocal(o.pos, _l);
       const lx = _l.x + steerBias * _l.z * 0.8;
-      if (_l.z > 0 && _l.z < scanLen + o.dims.hz && Math.abs(lx) < 1.5 + o.dims.hx * 0.5) {
+      // a police car asks traffic ahead to pull over, then squeezes past
+      const sirenPass = this.mode === 'police' && v.siren && o.ai && o.ai.mode === 'traffic';
+      if (sirenPass && _l.z > 0 && _l.z < 35 && Math.abs(_l.x) < 3) o.ai.yieldT = 3;
+      const width = sirenPass && o.ai.yieldT > 0 ? 0.9 + o.dims.hx * 0.3 : 1.5 + o.dims.hx * 0.5;
+      if (_l.z > 0 && _l.z < scanLen + o.dims.hz && Math.abs(lx) < width) {
         const gap = _l.z - hz - o.dims.hz;
         const allowed = Math.sqrt(Math.max(0, 2 * 5 * (gap - 1.8)));
         if (allowed < desired) { desired = allowed; blockedBy = o; }
@@ -184,7 +196,7 @@ export class VehicleManager {
   constructor(game) {
     this.game = game; this.list = [];
     this.rnd = Math.random;
-    this.trafficTarget = 18;
+    this.trafficTarget = 15;
     const sh = game.city.sites.safehouse;
     this.parkedSpots = game.city.parking.map((p, i) => ({ ...p, i, vehicle: null, seed: (i * 2654435761) % 1000 / 1000 })).filter((p) => Math.hypot(p.x - sh.x, p.z - sh.z) > 16);
   }
@@ -291,8 +303,8 @@ export class VehicleManager {
       this._parkT = 0.5;
       for (const s of this.parkedSpots) {
         const d = Math.hypot(s.x - p.x, s.z - p.z);
-        if (!s.vehicle && d < 100 && d > 50 && s.seed < (s.police ? 0.9 : 0.34) && !this.list.some((v) => (v.pos.x - s.x) ** 2 + (v.pos.z - s.z) ** 2 < 25)) this.spawnParked(s);
-        else if (s.vehicle && d > 160) {
+        if (!s.vehicle && d < 85 && d > 45 && s.seed < (s.police ? 0.9 : 0.34) && !this.list.some((v) => (v.pos.x - s.x) ** 2 + (v.pos.z - s.z) ** 2 < 25)) this.spawnParked(s);
+        else if (s.vehicle && d > 130) {
           const v = s.vehicle;
           if (v !== g.lastPlayerCar && !v.driver && !v.persistent) this.remove(v);
           else { s.vehicle = null; v.spot = null; }
@@ -303,7 +315,7 @@ export class VehicleManager {
   // populate the immediate area at game start (no visibility check)
   initialFill() {
     const p = this.game.player.wpos;
-    for (const s of this.parkedSpots) { const d = Math.hypot(s.x - p.x, s.z - p.z); if (d < 100 && s.seed < (s.police ? 0.9 : 0.34)) this.spawnParked(s); }
+    for (const s of this.parkedSpots) { const d = Math.hypot(s.x - p.x, s.z - p.z); if (d < 85 && s.seed < (s.police ? 0.9 : 0.34)) this.spawnParked(s); }
     let n = 0;
     for (let k = 0; k < 200 && n < this.trafficTarget; k++) {
       const e = this.game.roads.edges[(this.rnd() * this.game.roads.edges.length) | 0];

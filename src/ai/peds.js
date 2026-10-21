@@ -103,7 +103,7 @@ export class PedAI {
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.z - b.z) ** 2;
 
 export class PedManager {
-  constructor(game) { this.game = game; this.list = []; this.target = 26; }
+  constructor(game) { this.game = game; this.list = []; this.target = 24; }
   spawn(node) {
     const g = this.game; const n = g.walk.nodes[node];
     const id = PED_IDS[(Math.random() * PED_IDS.length) | 0];

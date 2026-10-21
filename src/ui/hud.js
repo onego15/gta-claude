@@ -186,7 +186,7 @@ export class HUD {
   }
 
   drawBigMap() {
-    const g = this.game, c = this.mapCanvas; const W = Math.min(innerWidth * 0.86, 1100), H = W * this.map.h / this.map.w;
+    const g = this.game, c = this.mapCanvas; const W = Math.min(innerWidth * 0.86, 1100, (innerHeight - 170) * this.map.w / this.map.h), H = W * this.map.h / this.map.w;
     c.width = W; c.height = H; const x = c.getContext('2d'); const k = W / this.map.w;
     x.drawImage(this.mapImg, 0, 0, W, H);
     const P = (wx, wz) => { const [a, b] = this.w2m(wx, wz); return [a * k, b * k]; };
